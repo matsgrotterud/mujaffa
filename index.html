@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8" />
+  <title>Mujaffa – Tjukk.com</title>
+
+  <!-- Ruffle: Flash-emulator via CDN -->
+  <script src="https://unpkg.com/@ruffle-rs/ruffle"></script>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background: radial-gradient(circle at top, #1a1a1a 0, #050505 60%);
+      color: #f5f5f5;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+
+    #game-wrapper {
+      background: rgba(0,0,0,0.6);
+      max-width: 100%;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    #game {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #controls {
+      width: 100%;
+      text-align: center;
+      margin-top: 8px;
+      position: absolute;
+      bottom: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    ruffle-player {
+      width: 90%;
+      height: 90%;
+    }
+    button {
+      margin-top: 4px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid #666;
+      background: #181818;
+      color: #eee;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      border-color: #aaa;
+    }
+
+    footer {
+      padding: 8px 16px 24px;
+      font-size: 11px;
+      opacity: 0.6;
+      text-align: center;
+    }
+
+    a {
+      color: #ddd;
+    }
+  </style>
+</head>
+<body>
+  <div id="game-wrapper">
+    <div id="game"></div>
+    <div id="controls">
+      <button id="fullscreen-btn">Fullscreen</button>
+    </div>
+  </div>
+  <script>
+    window.addEventListener("load", () => {
+      const ruffle = window.RufflePlayer ? window.RufflePlayer.newest() : null;
+      if (!ruffle) {
+        console.error("Ruffle ble ikke lastet.");
+        return;
+      }
+
+      const player = ruffle.createPlayer();
+      const container = document.getElementById("game");
+      container.appendChild(player);
+
+      // Last inn Mujaffa SWF-en (ligger i /games/)
+      player.load("games/mujaffa.swf");
+
+      const fullscreenBtn = document.getElementById("fullscreen-btn");
+      fullscreenBtn.addEventListener("click", () => {
+        if (player && player.requestFullscreen) {
+          player.requestFullscreen();
+        } else if (container.requestFullscreen) {
+          container.requestFullscreen();
+        }
+      });
+    });
+  </script>
+</body>
+</html>
