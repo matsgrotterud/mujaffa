@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html lang="no">
 <head>
   <meta charset="UTF-8" />
@@ -99,11 +100,12 @@
       touch-action: none;
     }
 
+    /* OPPDATERT GRID: 3x2 (med X og Y) */
     #touch-controls-inner {
       display: grid;
       grid-template-columns: 60px 60px 60px;
       grid-template-rows: 60px 60px;
-      gap: 8px;
+      gap: 10px;
       justify-content: center;
       align-items: center;
     }
@@ -153,18 +155,16 @@
       <p style="font-size: 11px; opacity: 0.7; margin-bottom: 4px; text-align:center;">
         Eksperimentell mobilstyring – funker kanskje, kanskje ikke 💀
       </p>
+
       <div id="touch-controls-inner">
-        <!-- Tom rute -->
-        <div></div>
-        <!-- Opp -->
+        <!-- RAD 1: X | ↑ | Y -->
+        <button data-key="KeyX">X</button>
         <button data-key="ArrowUp">▲</button>
-        <!-- Tom rute -->
-        <div></div>
-        <!-- Venstre -->
+        <button data-key="KeyY">Y</button>
+
+        <!-- RAD 2: ← | ↓ | → -->
         <button data-key="ArrowLeft">◀</button>
-        <!-- Ned -->
         <button data-key="ArrowDown">▼</button>
-        <!-- Høyre -->
         <button data-key="ArrowRight">▶</button>
       </div>
     </div>
@@ -186,83 +186,65 @@
       const container = document.getElementById("game");
       container.appendChild(player);
 
-      // Last inn Mujaffa SWF-en (ligger i /games/)
       player.load("games/mujaffa.swf");
 
       // Fullscreen-knapp
       const fullscreenBtn = document.getElementById("fullscreen-btn");
       fullscreenBtn.addEventListener("click", () => {
-        if (player && player.requestFullscreen) {
+        if (player.requestFullscreen) {
           player.requestFullscreen();
         } else if (container.requestFullscreen) {
           container.requestFullscreen();
         }
       });
 
-      // Prøv å sikre at player har fokus (for keyboard events)
+      // Fokus – viktig for keyboard events
       player.tabIndex = 0;
       player.focus && player.focus();
 
-      // Map for keyCodes (noen spill sjekker dette)
+      // Mapp KeyX & KeyY også:
       const keyCodeMap = {
         ArrowLeft: 37,
         ArrowUp: 38,
         ArrowRight: 39,
-        ArrowDown: 40
+        ArrowDown: 40,
+        KeyX: 88,
+        KeyY: 89
       };
 
-      function sendKeyEvent(type, key) {
+      function sendKey(type, key) {
         const keyCode = keyCodeMap[key] || 0;
 
-        const eventInit = {
+        const event = new KeyboardEvent(type, {
           key,
           code: key,
           keyCode,
           which: keyCode,
-          bubbles: true,
-          cancelable: true
-        };
+          bubbles: true
+        });
 
-        // 1) mot window
-        const winEvent = new KeyboardEvent(type, eventInit);
-        window.dispatchEvent(winEvent);
-
-        // 2) mot container (der Ruffle ligger)
-        const containerEvent = new KeyboardEvent(type, eventInit);
-        container.dispatchEvent(containerEvent);
-
-        // 3) mot selve player-elementet
-        const playerEvent = new KeyboardEvent(type, eventInit);
-        player.dispatchEvent(playerEvent);
-
-        // prøv å holde fokus på player
+        // Send flere steder:
+        window.dispatchEvent(event);
+        container.dispatchEvent(event);
+        player.dispatchEvent(event);
         player.focus && player.focus();
       }
 
-      // Touch / mus-handling for piltast-knappene
+      // Touch/mus for knappene:
       const buttons = document.querySelectorAll("#touch-controls button[data-key]");
       buttons.forEach(btn => {
         const key = btn.dataset.key;
 
-        const startHandler = (e) => {
-          e.preventDefault();
-          sendKeyEvent("keydown", key);
-        };
+        const start = (e) => { e.preventDefault(); sendKey("keydown", key); };
+        const end = (e) => { e.preventDefault(); sendKey("keyup", key); };
 
-        const endHandler = (e) => {
-          e.preventDefault();
-          sendKeyEvent("keyup", key);
-        };
+        btn.addEventListener("touchstart", start);
+        btn.addEventListener("touchend", end);
+        btn.addEventListener("touchcancel", end);
 
-        // Touch events
-        btn.addEventListener("touchstart", startHandler);
-        btn.addEventListener("touchend", endHandler);
-        btn.addEventListener("touchcancel", endHandler);
-
-        // Mus (for debugging på desktop)
-        btn.addEventListener("mousedown", startHandler);
-        btn.addEventListener("mouseup", endHandler);
-        btn.addEventListener("mouseleave", endHandler);
+        btn.addEventListener("mousedown", start);
+        btn.addEventListener("mouseup", end);
+        btn.addEventListener("mouseleave", end);
       });
     });
   </script>
