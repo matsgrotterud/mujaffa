@@ -93,16 +93,25 @@
       color: #ddd;
     }
 
-    /* Mobil-joystick */
+    /* TOUCH-KONTROLLER (alltid synlig for debugging) */
     #touch-controls {
-      display: none; /* skjules som default (desktop) */
       margin-top: 12px;
       user-select: none;
       -webkit-user-select: none;
       touch-action: none;
     }
 
-    /* OPPDATERT GRID: 3x2 (med X og Y) */
+    #touch-label {
+      font-size: 11px;
+      opacity: 0.7;
+      margin-bottom: 4px;
+      text-align: center;
+    }
+
+    /* 3x2 grid: 
+       X    ▲    Y
+       ◀    ▼    ▶
+    */
     #touch-controls-inner {
       display: grid;
       grid-template-columns: 60px 60px 60px;
@@ -110,9 +119,10 @@
       gap: 10px;
       justify-content: center;
       align-items: center;
+      margin-top: 4px;
     }
 
-    #touch-controls button {
+    #touch-controls-inner button {
       width: 60px;
       height: 60px;
       border-radius: 12px;
@@ -121,29 +131,26 @@
       background: rgba(24,24,24,0.9);
     }
 
-    #touch-controls button:active {
+    #touch-controls-inner button:active {
       border-color: #fff;
       background: rgba(40,40,40,0.9);
     }
 
-    /* Bare vis touch-controls på små skjermer */
+    /* Litt mer kompakt på mobil */
     @media (max-width: 900px) {
-      #touch-controls {
-        display: block;
-      }
-
       #game {
         width: 100vw;
         height: 60vh;
+      }
+
+      #touch-controls-inner {
+        gap: 8px;
       }
     }
   </style>
 </head>
 <body>
-  <header>
-    <h1>Mujaffa</h1>
-    <p>Spill Mujaffa direkte i nettleseren – best på PC, men prøver å hjelpe mobil også 🚗</p>
-  </header>
+
 
   <div id="game-wrapper">
     <div id="game"></div>
@@ -152,29 +159,22 @@
       <button id="fullscreen-btn">Fullscreen</button>
     </div>
 
-    <!-- On-screen piltaster for mobil -->
+    <!-- On-screen piltaster + X/Y -->
     <div id="touch-controls">
-      <p style="font-size: 11px; opacity: 0.7; margin-bottom: 4px; text-align:center;">
-        Eksperimentell mobilstyring – funker kanskje, kanskje ikke 💀
-      </p>
 
       <div id="touch-controls-inner">
-        <!-- RAD 1: X | ↑ | Y -->
+        <!-- RAD 1: X | ▲ | Y -->
         <button data-key="KeyX">X</button>
         <button data-key="ArrowUp">▲</button>
         <button data-key="KeyY">Y</button>
 
-        <!-- RAD 2: ← | ↓ | → -->
+        <!-- RAD 2: ◀ | ▼ | ▶ -->
         <button data-key="ArrowLeft">◀</button>
         <button data-key="ArrowDown">▼</button>
         <button data-key="ArrowRight">▶</button>
       </div>
     </div>
   </div>
-
-  <footer>
-    Kjører via Ruffle (Flash-emulator). Spillet er opprinnelig laget for tastatur, så mobilstøtte kan være begrenset.
-  </footer>
 
   <script>
     window.addEventListener("load", () => {
@@ -188,6 +188,7 @@
       const container = document.getElementById("game");
       container.appendChild(player);
 
+      // Last inn Mujaffa SWF-en
       player.load("games/mujaffa.swf");
 
       // Fullscreen-knapp
@@ -204,7 +205,7 @@
       player.tabIndex = 0;
       player.focus && player.focus();
 
-      // Mapp KeyX & KeyY også:
+      // Key mapping – inkluderer X og Y
       const keyCodeMap = {
         ArrowLeft: 37,
         ArrowUp: 38,
@@ -225,7 +226,6 @@
           bubbles: true
         });
 
-        // Send flere steder:
         window.dispatchEvent(event);
         container.dispatchEvent(event);
         player.dispatchEvent(event);
@@ -233,17 +233,19 @@
       }
 
       // Touch/mus for knappene:
-      const buttons = document.querySelectorAll("#touch-controls button[data-key]");
+      const buttons = document.querySelectorAll("#touch-controls-inner button[data-key]");
       buttons.forEach(btn => {
         const key = btn.dataset.key;
 
         const start = (e) => { e.preventDefault(); sendKey("keydown", key); };
         const end = (e) => { e.preventDefault(); sendKey("keyup", key); };
 
+        // Touch
         btn.addEventListener("touchstart", start);
         btn.addEventListener("touchend", end);
         btn.addEventListener("touchcancel", end);
 
+        // Mus (for debugging på desktop)
         btn.addEventListener("mousedown", start);
         btn.addEventListener("mouseup", end);
         btn.addEventListener("mouseleave", end);
