@@ -163,10 +163,10 @@
     <div id="touch-controls">
 
       <div id="touch-controls-inner">
-        <!-- RAD 1: X | ▲ | Y -->
-        <button data-key="KeyX">X</button>
+        <!-- RAD 1: Z | ▲ | X -->
+        <button data-key="KeyZ">Z</button>
         <button data-key="ArrowUp">▲</button>
-        <button data-key="KeyY">Y</button>
+        <button data-key="KeyX">X</button>
 
         <!-- RAD 2: ◀ | ▼ | ▶ -->
         <button data-key="ArrowLeft">◀</button>
@@ -177,80 +177,96 @@
   </div>
 
   <script>
-    window.addEventListener("load", () => {
-      const ruffle = window.RufflePlayer ? window.RufflePlayer.newest() : null;
-      if (!ruffle) {
-        console.error("Ruffle ble ikke lastet.");
-        return;
+  window.addEventListener("load", () => {
+    const ruffle = window.RufflePlayer ? window.RufflePlayer.newest() : null;
+    if (!ruffle) {
+      console.error("Ruffle ble ikke lastet.");
+      return;
+    }
+
+    const player = ruffle.createPlayer();
+    const container = document.getElementById("game");
+    container.appendChild(player);
+
+    // Last inn Mujaffa SWF-en
+    player.load("games/mujaffa.swf");
+
+    // Fullscreen-knapp
+    const fullscreenBtn = document.getElementById("fullscreen-btn");
+    fullscreenBtn.addEventListener("click", () => {
+      if (player.requestFullscreen) {
+        player.requestFullscreen();
+      } else if (container.requestFullscreen) {
+        container.requestFullscreen();
+      }
+    });
+
+    // Fokus – viktig for keyboard events
+    player.tabIndex = 0;
+    if (player.focus) player.focus();
+
+    // Key mapping – NÅ MED Z OG RIKTIGE KEY-VALUES
+    const keyCodeMap = {
+      ArrowLeft: 37,
+      ArrowUp: 38,
+      ArrowRight: 39,
+      ArrowDown: 40,
+      KeyZ: 90, // Z = 90
+      KeyX: 88  // X = 88
+    };
+
+    function sendKey(type, code) {
+      const keyCode = keyCodeMap[code] || 0;
+
+      // For bokstavtaster: bruk faktisk bokstav som `key` (z/x),
+      // og "KeyZ"/"KeyX" som `code`
+      let key = code;
+      if (code.startsWith("Key")) {
+        key = code.slice(3).toLowerCase(); // KeyZ -> "z", KeyX -> "x"
       }
 
-      const player = ruffle.createPlayer();
-      const container = document.getElementById("game");
-      container.appendChild(player);
-
-      // Last inn Mujaffa SWF-en
-      player.load("games/mujaffa.swf");
-
-      // Fullscreen-knapp
-      const fullscreenBtn = document.getElementById("fullscreen-btn");
-      fullscreenBtn.addEventListener("click", () => {
-        if (player.requestFullscreen) {
-          player.requestFullscreen();
-        } else if (container.requestFullscreen) {
-          container.requestFullscreen();
-        }
+      const event = new KeyboardEvent(type, {
+        key,
+        code,
+        keyCode,
+        which: keyCode,
+        bubbles: true
       });
 
-      // Fokus – viktig for keyboard events
-      player.tabIndex = 0;
-      player.focus && player.focus();
+      // Fyr eventet flere steder for å være sikker
+      window.dispatchEvent(event);
+      document.dispatchEvent(event);
+      container.dispatchEvent(event);
+      player.dispatchEvent(event);
 
-      // Key mapping – inkluderer X og Y
-      const keyCodeMap = {
-        ArrowLeft: 37,
-        ArrowUp: 38,
-        ArrowRight: 39,
-        ArrowDown: 40,
-        KeyX: 88,
-        KeyY: 89
+      if (player.focus) player.focus();
+    }
+
+    // Touch/mus for knappene:
+    const buttons = document.querySelectorAll("#touch-controls-inner button[data-key]");
+    buttons.forEach(btn => {
+      const code = btn.dataset.key;
+
+      const start = (e) => { 
+        e.preventDefault(); 
+        sendKey("keydown", code); 
+      };
+      const end = (e) => { 
+        e.preventDefault(); 
+        sendKey("keyup", code); 
       };
 
-      function sendKey(type, key) {
-        const keyCode = keyCodeMap[key] || 0;
+      // Touch
+      btn.addEventListener("touchstart", start);
+      btn.addEventListener("touchend", end);
+      btn.addEventListener("touchcancel", end);
 
-        const event = new KeyboardEvent(type, {
-          key,
-          code: key,
-          keyCode,
-          which: keyCode,
-          bubbles: true
-        });
-
-        window.dispatchEvent(event);
-        container.dispatchEvent(event);
-        player.dispatchEvent(event);
-        player.focus && player.focus();
-      }
-
-      // Touch/mus for knappene:
-      const buttons = document.querySelectorAll("#touch-controls-inner button[data-key]");
-      buttons.forEach(btn => {
-        const key = btn.dataset.key;
-
-        const start = (e) => { e.preventDefault(); sendKey("keydown", key); };
-        const end = (e) => { e.preventDefault(); sendKey("keyup", key); };
-
-        // Touch
-        btn.addEventListener("touchstart", start);
-        btn.addEventListener("touchend", end);
-        btn.addEventListener("touchcancel", end);
-
-        // Mus (for debugging på desktop)
-        btn.addEventListener("mousedown", start);
-        btn.addEventListener("mouseup", end);
-        btn.addEventListener("mouseleave", end);
-      });
+      // Mus (for debugging på desktop)
+      btn.addEventListener("mousedown", start);
+      btn.addEventListener("mouseup", end);
+      btn.addEventListener("mouseleave", end);
     });
-  </script>
+  });
+</script>
 </body>
 </html>
