@@ -143,7 +143,7 @@
     }
 
     /* 3x2 grid: 
-       X    ▲    Y
+       X    ▲    X
        ◀    ▼    ▶
     */
     #touch-controls-inner {
@@ -181,9 +181,57 @@
         gap: 8px;
       }
     }
+
+    /* FULLSCREEN INTRO-OVERLAY */
+
+    #intro-overlay {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle at top, #3d3d3d 0, #000 55%, #000 100%);
+      color: #f5f5f5;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 16px;
+      z-index: 9999;
+      transition: opacity 0.5s ease;
+      opacity: 1;
+    }
+
+    #intro-overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    #intro-overlay h2 {
+      font-size: 24px;
+      margin-bottom: 8px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    #intro-overlay p {
+      font-size: 14px;
+      opacity: 0.9;
+      margin-bottom: 16px;
+    }
+
+    #intro-overlay small {
+      opacity: 0.7;
+      font-size: 11px;
+    }
   </style>
 </head>
 <body>
+  <!-- Intro-overlay som dekker alt de første sekundene -->
+  <div id="intro-overlay">
+    <h2>Din gamle gris 🐷</h2>
+    <p>Her har'u Mujaffa, rett i nettlesern.</p>
+    <small>Laster Mujaffa... gjør deg klar.</small>
+  </div>
+
   <div id="game-wrapper">
     <div id="game"></div>
 
@@ -287,6 +335,18 @@
         btn.addEventListener("mouseup", end);
         btn.addEventListener("mouseleave", end);
       });
+
+      // Skjul intro-overlay etter ~3 sek
+      const overlay = document.getElementById("intro-overlay");
+      if (overlay) {
+        setTimeout(() => {
+          overlay.classList.add("hidden");
+          // Fjern helt etter fade, så den ikke blokkerer noe
+          setTimeout(() => {
+            overlay.style.display = "none";
+          }, 600);
+        }, 3000); // 3000 ms = 3 sek
+      }
     });
   </script>
 </body>
