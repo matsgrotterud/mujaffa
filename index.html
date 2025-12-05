@@ -54,10 +54,9 @@
       overflow: hidden;
     }
 
+    /* Viktig: ikke height: 100% her lenger */
     ruffle-player {
       width: 100%;
-      height: 100%;
-      height: revert-layer;
     }
 
     button {
@@ -336,8 +335,9 @@
 
       const buttons = document.querySelectorAll("button[data-key]");
 
-      // PILTAST TAP vs HOLD LOGIKK v2
-      const HOLD_DELAY_MS = 260; // må holde SÅ lenge før vi kaller det "hold"
+      // PILTAST TAP vs HOLD LOGIKK v3 – enda mindre sensitiv
+      const HOLD_DELAY_MS = 380; // må holde så lenge før vi kaller det "hold"
+
       const ARROW_CODES = {
         ArrowLeft: true,
         ArrowRight: true,
@@ -395,11 +395,9 @@
             clearTimeout(state.holdTimeout);
             state.holdTimeout = null;
 
-            // Send en veldig kort pulse: keydown nå, keyup i neste frame
+            // TAP: superkort pulse – keydown og keyup umiddelbart
             sendKey("keydown", code);
-            requestAnimationFrame(() => {
-              sendKey("keyup", code);
-            });
+            sendKey("keyup", code);
           } else if (state.isDown) {
             // Var i hold-modus → bare slipp
             sendKey("keyup", code);
