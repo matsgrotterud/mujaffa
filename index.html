@@ -3,6 +3,15 @@
   <meta charset="UTF-8" />
   <title>Mujaffa – Tjukk.com</title>
 
+  <!-- Ruffle config: autoplay uten play-overlay -->
+  <script>
+    window.RufflePlayer = window.RufflePlayer || {};
+    window.RufflePlayer.config = {
+      autoplay: "on",          // start automatisk
+      unmuteOverlay: "hidden"  // skjul lyd-overlay
+    };
+  </script>
+
   <!-- Ruffle: Flash-emulator via CDN -->
   <script src="https://unpkg.com/@ruffle-rs/ruffle"></script>
 
@@ -16,7 +25,7 @@
     body {
       margin: 0;
       padding: 0;
-      background: radial-gradient(circle at top, #1a1a1a 0, #050505 60%);
+      background: #fff;
       color: #f5f5f5;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       display: flex;
@@ -43,13 +52,11 @@
     }
 
     #game-wrapper {
-      margin: 16px;
-      padding: 12px;
-      border-radius: 16px;
-      border: 1px solid #333;
-      background: rgba(0,0,0,0.6);
-      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.7);
+      margin: 0;
+      padding: 0;
+      background: #fff;
       max-width: 100%;
+      width: 100%;
     }
 
     #game {
@@ -58,14 +65,13 @@
       max-width: 100vw;
       max-height: 70vh;
       overflow: hidden;
-    }
-    ruffle-player {
       width: 100%;
+      height: 100vh;
     }
 
-    #controls {
-      text-align: center;
-      margin-top: 8px;
+    ruffle-player {
+      width: 100%;
+      height: 100%;
     }
 
     button {
@@ -94,12 +100,40 @@
     }
 
     /* TOUCH-KONTROLLER (alltid synlig for debugging) */
+
+    #controls {
+      text-align: center;
+      margin-top: 8px;
+      position: absolute;
+      bottom:  0;
+      left: 0;
+      right: 0;
+    }
+
     #touch-controls {
       margin-top: 12px;
       user-select: none;
       -webkit-user-select: none;
       touch-action: none;
+      position: absolute;
+      bottom: 0;
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      left: 0;
+      right: 0;
     }
+
+    /*
+    @media(min-width:767px){
+      #controls {
+        display: none;
+      }
+      #touch-controls {
+        display: none;
+      }
+    }
+    */
 
     #touch-label {
       font-size: 11px;
@@ -150,18 +184,18 @@
   </style>
 </head>
 <body>
-
-
   <div id="game-wrapper">
     <div id="game"></div>
 
     <div id="controls">
       <button id="fullscreen-btn">Fullscreen</button>
+      <!-- Desktop-knapper for H og B -->
+      <button data-key="KeyH">H</button>
+      <button data-key="KeyB">B</button>
     </div>
 
-    <!-- On-screen piltaster + X/Y -->
+    <!-- On-screen piltaster + Z/X -->
     <div id="touch-controls">
-
       <div id="touch-controls-inner">
         <!-- RAD 1: Z | ▲ | X -->
         <button data-key="KeyZ">Z</button>
@@ -177,96 +211,83 @@
   </div>
 
   <script>
-  window.addEventListener("load", () => {
-    const ruffle = window.RufflePlayer ? window.RufflePlayer.newest() : null;
-    if (!ruffle) {
-      console.error("Ruffle ble ikke lastet.");
-      return;
-    }
-
-    const player = ruffle.createPlayer();
-    const container = document.getElementById("game");
-    container.appendChild(player);
-
-    // Last inn Mujaffa SWF-en
-    player.load("games/mujaffa.swf");
-
-    // Fullscreen-knapp
-    const fullscreenBtn = document.getElementById("fullscreen-btn");
-    fullscreenBtn.addEventListener("click", () => {
-      if (player.requestFullscreen) {
-        player.requestFullscreen();
-      } else if (container.requestFullscreen) {
-        container.requestFullscreen();
-      }
-    });
-
-    // Fokus – viktig for keyboard events
-    player.tabIndex = 0;
-    if (player.focus) player.focus();
-
-    // Key mapping – NÅ MED Z OG RIKTIGE KEY-VALUES
-    const keyCodeMap = {
-      ArrowLeft: 37,
-      ArrowUp: 38,
-      ArrowRight: 39,
-      ArrowDown: 40,
-      KeyZ: 90, // Z = 90
-      KeyX: 88  // X = 88
-    };
-
-    function sendKey(type, code) {
-      const keyCode = keyCodeMap[code] || 0;
-
-      // For bokstavtaster: bruk faktisk bokstav som `key` (z/x),
-      // og "KeyZ"/"KeyX" som `code`
-      let key = code;
-      if (code.startsWith("Key")) {
-        key = code.slice(3).toLowerCase(); // KeyZ -> "z", KeyX -> "x"
+    window.addEventListener("load", () => {
+      const ruffle = window.RufflePlayer ? window.RufflePlayer.newest() : null;
+      if (!ruffle) {
+        console.error("Ruffle ble ikke lastet.");
+        return;
       }
 
-      const event = new KeyboardEvent(type, {
-        key,
-        code,
-        keyCode,
-        which: keyCode,
-        bubbles: true
+      const player = ruffle.createPlayer();
+      const container = document.getElementById("game");
+      container.appendChild(player);
+
+      // Last inn Mujaffa SWF-en
+      player.load("games/mujaffa.swf");
+
+      // Fullscreen-knapp
+      const fullscreenBtn = document.getElementById("fullscreen-btn");
+      fullscreenBtn.addEventListener("click", () => {
+        if (player.requestFullscreen) {
+          player.requestFullscreen();
+        } else if (container.requestFullscreen) {
+          container.requestFullscreen();
+        }
       });
 
-      // Fyr eventet flere steder for å være sikker
-      window.dispatchEvent(event);
-      document.dispatchEvent(event);
-      container.dispatchEvent(event);
-      player.dispatchEvent(event);
+      // Fokus – viktig for keyboard events
+      player.tabIndex = 0;
+      player.focus && player.focus();
 
-      if (player.focus) player.focus();
-    }
-
-    // Touch/mus for knappene:
-    const buttons = document.querySelectorAll("#touch-controls-inner button[data-key]");
-    buttons.forEach(btn => {
-      const code = btn.dataset.key;
-
-      const start = (e) => { 
-        e.preventDefault(); 
-        sendKey("keydown", code); 
-      };
-      const end = (e) => { 
-        e.preventDefault(); 
-        sendKey("keyup", code); 
+      // Riktig mapping: KEY-CODE + faktisk .key-verdi
+      const virtualKeyMap = {
+        ArrowLeft:  { key: "ArrowLeft", code: "ArrowLeft", keyCode: 37 },
+        ArrowUp:    { key: "ArrowUp",   code: "ArrowUp",   keyCode: 38 },
+        ArrowRight: { key: "ArrowRight",code: "ArrowRight",keyCode: 39 },
+        ArrowDown:  { key: "ArrowDown", code: "ArrowDown", keyCode: 40 },
+        KeyZ:       { key: "z",         code: "KeyZ",      keyCode: 90 },
+        KeyX:       { key: "x",         code: "KeyX",      keyCode: 88 },
+        KeyH:       { key: "h",         code: "KeyH",      keyCode: 72 },
+        KeyB:       { key: "b",         code: "KeyB",      keyCode: 66 }
       };
 
-      // Touch
-      btn.addEventListener("touchstart", start);
-      btn.addEventListener("touchend", end);
-      btn.addEventListener("touchcancel", end);
+      function sendKey(type, code) {
+        const info = virtualKeyMap[code];
+        if (!info) return;
 
-      // Mus (for debugging på desktop)
-      btn.addEventListener("mousedown", start);
-      btn.addEventListener("mouseup", end);
-      btn.addEventListener("mouseleave", end);
+        const event = new KeyboardEvent(type, {
+          key:    info.key,
+          code:   info.code,
+          keyCode: info.keyCode,
+          which:  info.keyCode,
+          bubbles: true
+        });
+
+        window.dispatchEvent(event);
+        container.dispatchEvent(event);
+        player.dispatchEvent(event);
+        player.focus && player.focus();
+      }
+
+      // Alle knapper med data-key (touch + H/B)
+      const buttons = document.querySelectorAll("button[data-key]");
+      buttons.forEach(btn => {
+        const code = btn.dataset.key;
+
+        const start = (e) => { e.preventDefault(); sendKey("keydown", code); };
+        const end   = (e) => { e.preventDefault(); sendKey("keyup",   code); };
+
+        // Touch
+        btn.addEventListener("touchstart", start);
+        btn.addEventListener("touchend", end);
+        btn.addEventListener("touchcancel", end);
+
+        // Mus (desktop)
+        btn.addEventListener("mousedown", start);
+        btn.addEventListener("mouseup", end);
+        btn.addEventListener("mouseleave", end);
+      });
     });
-  });
-</script>
+  </script>
 </body>
 </html>
