@@ -328,37 +328,38 @@
         if (player.focus) player.focus();
       }
 
-      // Alle knapper med data-key (touch + H/B)
+      // ---- SENSITIVITET PÅ PILTASTER (touch-knappene) ----
+      const ARROW_HOLD_DELAY_MS = 90; // juster: 60 = mer sensitiv, 140 = tregere
+
       const buttons = document.querySelectorAll("button[data-key]");
+      const arrowTimers = {};
+      const arrowDown = {};
+
       buttons.forEach(btn => {
         const code = btn.dataset.key;
+        const isArrow = code.startsWith("Arrow");
 
-        const start = (e) => { e.preventDefault(); sendKey("keydown", code); };
-        const end   = (e) => { e.preventDefault(); sendKey("keyup",   code); };
+        const start = (e) => {
+          e.preventDefault();
 
-        // Touch
-        btn.addEventListener("touchstart", start);
-        btn.addEventListener("touchend", end);
-        btn.addEventListener("touchcancel", end);
+          if (isArrow) {
+            // Hvis det allerede er timer eller keydown aktiv, gjør ingenting
+            if (arrowTimers[code] || arrowDown[code]) return;
 
-        // Mus (desktop)
-        btn.addEventListener("mousedown", start);
-        btn.addEventListener("mouseup", end);
-        btn.addEventListener("mouseleave", end);
-      });
+            // Start liten død-sone før vi sender keydown
+            arrowTimers[code] = setTimeout(() => {
+              sendKey("keydown", code);
+              arrowDown[code] = true;
+              arrowTimers[code] = null;
+            }, ARROW_HOLD_DELAY_MS);
+          } else {
+            // Z/X/H/B – instant
+            sendKey("keydown", code);
+          }
+        };
 
-      // Skjul intro-overlay etter ~3 sek
-      const overlay = document.getElementById("intro-overlay");
-      if (overlay) {
-        setTimeout(() => {
-          overlay.classList.add("hidden");
-          // Fjern helt etter fade, så den ikke blokkerer noe
-          setTimeout(() => {
-            overlay.style.display = "none";
-          }, 600);
-        }, 3000); // 3000 ms = 3 sek
-      }
-    });
-  </script>
-</body>
-</html>
+        const end = (e) => {
+          e.preventDefault();
+
+          if (isArrow) {
+            // Hvis vi fortsatt bare er i død-sonen → cancel, ingen keydo
