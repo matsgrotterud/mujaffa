@@ -334,10 +334,16 @@
       const buttons = document.querySelectorAll("button[data-key]");
       const arrowTimers = {};
       const arrowDown = {};
+      const ARROW_CODES = {
+        ArrowLeft: true,
+        ArrowRight: true,
+        ArrowUp: true,
+        ArrowDown: true
+      };
 
       buttons.forEach(btn => {
         const code = btn.dataset.key;
-        const isArrow = code.startsWith("Arrow");
+        const isArrow = !!ARROW_CODES[code];
 
         const start = (e) => {
           e.preventDefault();
@@ -362,4 +368,46 @@
           e.preventDefault();
 
           if (isArrow) {
-            // Hvis vi fortsatt bare er i død-sonen → cancel, ingen keydo
+            // Hvis vi fortsatt bare er i død-sonen → cancel, ingen keydown sendt
+            if (arrowTimers[code]) {
+              clearTimeout(arrowTimers[code]);
+              arrowTimers[code] = null;
+            }
+
+            // Hvis keydown faktisk ble sendt → send keyup
+            if (arrowDown[code]) {
+              sendKey("keyup", code);
+              arrowDown[code] = false;
+            }
+          } else {
+            // Z/X/H/B – vanlig keyup
+            sendKey("keyup", code);
+          }
+        };
+
+        // Touch
+        btn.addEventListener("touchstart", start, { passive: false });
+        btn.addEventListener("touchend", end, { passive: false });
+        btn.addEventListener("touchcancel", end, { passive: false });
+
+        // Mus (desktop)
+        btn.addEventListener("mousedown", start);
+        btn.addEventListener("mouseup", end);
+        btn.addEventListener("mouseleave", end);
+      });
+
+      // Skjul intro-overlay etter ~3 sek
+      const overlay = document.getElementById("intro-overlay");
+      if (overlay) {
+        setTimeout(() => {
+          overlay.classList.add("hidden");
+          // Fjern helt etter fade, så den ikke blokkerer noe
+          setTimeout(() => {
+            overlay.style.display = "none";
+          }, 600);
+        }, 3000); // 3000 ms = 3 sek
+      }
+    });
+  </script>
+</body>
+</html>
