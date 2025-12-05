@@ -240,23 +240,23 @@
   <button id="fullscreen-btn">Fullscreen</button>
 
   <!-- Kontrollstasjon nederst:
-       Rad 1: [ X (VINK) ] [ ▲ ] [ Z (TUT) ]
-       Rad 2: [ ◀       ] [ ▼ ] [ ▶       ] -->
+       Rad 1: [ X (TUT) ] [ ▲ ] [ Z (VINK) ]
+       Rad 2: [ ◀      ] [ ▼ ] [ ▶       ] -->
   <div id="touch-controls">
     <div id="touch-controls-inner">
       <!-- Øverste rad -->
-      <button data-key="KeyX" aria-label="Vink">
-        👋
-        <span class="label">VINK</span>
+      <!-- VENSTRE: X = TUT (bare emoji) -->
+      <button data-key="KeyX" aria-label="Tut (X)">
+        📯
       </button>
 
       <button class="btn-arrow" data-key="ArrowUp" aria-label="Opp">
         ▲
       </button>
 
-      <button data-key="KeyZ" aria-label="Tut">
-        ✋
-        <span class="label">TUT</span>
+      <!-- HØYRE: Z = VINK (bare emoji) -->
+      <button data-key="KeyZ" aria-label="Vink (Z)">
+        👋
       </button>
 
       <!-- Nederste rad -->
@@ -335,8 +335,8 @@
 
       const buttons = document.querySelectorAll("button[data-key]");
 
-      // PILTAST TAP vs HOLD LOGIKK v3 – enda mindre sensitiv
-      const HOLD_DELAY_MS = 380; // må holde så lenge før vi kaller det "hold"
+      // PILTAST TAP vs HOLD LOGIKK v4 – enda mindre sensitiv
+      const HOLD_DELAY_MS = 700; // må holde ganske lenge før vi kaller det "hold"
 
       const ARROW_CODES = {
         ArrowLeft: true,
