@@ -35,13 +35,29 @@
       position: relative;
     }
 
+    header {
+      padding: 24px 16px 8px;
+      text-align: center;
+    }
+
+    h1 {
+      margin: 0 0 4px;
+      font-size: 28px;
+      letter-spacing: 0.03em;
+    }
+
+    p {
+      margin: 0;
+      opacity: 0.8;
+      font-size: 14px;
+    }
+
     #game-wrapper {
       margin: 0;
       padding: 0;
       background: #fff;
       max-width: 100%;
       width: 100%;
-      position: relative;
     }
 
     #game {
@@ -73,7 +89,18 @@
       border-color: #aaa;
     }
 
-    /* TOUCH-KONTROLLER */
+    footer {
+      padding: 8px 16px 24px;
+      font-size: 11px;
+      opacity: 0.6;
+      text-align: center;
+    }
+
+    a {
+      color: #ddd;
+    }
+
+    /* TOUCH-KONTROLLER (alltid synlig for debugging) */
 
     #controls {
       text-align: center;
@@ -96,14 +123,36 @@
       align-items: flex-end;
       left: 0;
       right: 0;
-      position: fixed;
+      position: absolute;
       bottom: 0;
     }
 
+    /*
+    @media(min-width:767px){
+      #controls {
+        display: none;
+      }
+      #touch-controls {
+        display: none;
+      }
+    }
+    */
+
+    #touch-label {
+      font-size: 11px;
+      opacity: 0.7;
+      margin-bottom: 4px;
+      text-align: center;
+    }
+
+    /* 3x2 grid: 
+       X    ▲    X
+       ◀    ▼    ▶
+    */
     #touch-controls-inner {
       display: grid;
       grid-template-columns: 60px 60px 60px;
-      grid-template-rows: auto auto auto;
+      grid-template-rows: 60px 60px;
       gap: 10px;
       justify-content: center;
       align-items: center;
@@ -111,7 +160,7 @@
     }
 
     #touch-controls-inner button {
-      width: 60px;
+      width: calc((100%vw/ 3) - 50px);
       height: 60px;
       border-radius: 12px;
       font-size: 20px;
@@ -124,19 +173,7 @@
       background: rgba(40,40,40,0.9);
     }
 
-    /* Tommel-sonen for styring (ligger over nedre del av spillet) */
-    #thumb-zone {
-      position: absolute;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      height: 40vh; /* kan justeres */
-      touch-action: none;
-      /* Litt transparent overlay for debugging – fjern om du vil */
-      background: transparent;
-      z-index: 5; /* under knappene (som er i egen stacking), men over spillet */
-    }
-
+    /* Litt mer kompakt på mobil */
     @media (max-width: 900px) {
       #game {
         width: 100vw;
@@ -145,10 +182,6 @@
 
       #touch-controls-inner {
         gap: 8px;
-      }
-
-      #thumb-zone {
-        height: 50vh;
       }
     }
 
@@ -205,17 +238,15 @@
   <div id="game-wrapper">
     <div id="game"></div>
 
-    <!-- Tommel-styringsområde (drag med tommel for å styre) -->
-    <div id="thumb-zone"></div>
-
     <div id="controls">
       <button id="fullscreen-btn">Fullscreen</button>
+      <!-- Desktop-knapper for H og B -->
     </div>
 
-    <!-- On-screen piltaster + Z/X/H/B -->
+    <!-- On-screen piltaster + Z/X -->
     <div id="touch-controls">
       <div id="touch-controls-inner">
-        <!-- Ekstra linje: H / B -->
+        <!-- RAD 0: H / B -->
         <div class="extraLine">
           <button data-key="KeyH">H</button>
           <button data-key="KeyB">B</button>
@@ -265,7 +296,7 @@
 
       // Fokus – viktig for keyboard events
       player.tabIndex = 0;
-      player.focus && player.focus();
+      if (player.focus) player.focus();
 
       // Riktig mapping: KEY-CODE + faktisk .key-verdi
       const virtualKeyMap = {
@@ -294,23 +325,16 @@
         window.dispatchEvent(event);
         container.dispatchEvent(event);
         player.dispatchEvent(event);
-        player.focus && player.focus();
+        if (player.focus) player.focus();
       }
 
-      // ---- VANLIGE KNAPPER (instant, også på mobil) ----
+      // Alle knapper med data-key (touch + H/B)
       const buttons = document.querySelectorAll("button[data-key]");
       buttons.forEach(btn => {
         const code = btn.dataset.key;
 
-        const start = (e) => {
-          e.preventDefault();
-          sendKey("keydown", code);
-        };
-
-        const end = (e) => {
-          e.preventDefault();
-          sendKey("keyup", code);
-        };
+        const start = (e) => { e.preventDefault(); sendKey("keydown", code); };
+        const end   = (e) => { e.preventDefault(); sendKey("keyup",   code); };
 
         // Touch
         btn.addEventListener("touchstart", start);
@@ -322,77 +346,6 @@
         btn.addEventListener("mouseup", end);
         btn.addEventListener("mouseleave", end);
       });
-
-      // ---- TOMMEL-STYRING I EGEN SONE ----
-      const thumbZone = document.getElementById("thumb-zone");
-      let thumbActive = false;
-      let startX = 0;
-      let startY = 0;
-      let currentDir = null;
-      const DEADZONE = 25; // px før det begynner å styre
-
-      function setDirection(newDir) {
-        if (newDir === currentDir) return;
-
-        // Slipp gammel retning
-        if (currentDir) {
-          sendKey("keyup", currentDir);
-        }
-
-        currentDir = newDir;
-
-        // Ny retning
-        if (currentDir) {
-          sendKey("keydown", currentDir);
-        }
-      }
-
-      if (thumbZone) {
-        thumbZone.addEventListener("touchstart", (e) => {
-          if (!e.touches || e.touches.length === 0) return;
-          const t = e.touches[0];
-          startX = t.clientX;
-          startY = t.clientY;
-          thumbActive = true;
-          setDirection(null);
-          e.preventDefault();
-        });
-
-        thumbZone.addEventListener("touchmove", (e) => {
-          if (!thumbActive || !e.touches || e.touches.length === 0) return;
-          const t = e.touches[0];
-          const dx = t.clientX - startX;
-          const dy = t.clientY - startY;
-
-          let dir = null;
-
-          // Bestem om det er mest horisontal eller vertikal bevegelse
-          if (Math.abs(dx) > Math.abs(dy)) {
-            // Venstre / høyre
-            if (Math.abs(dx) > DEADZONE) {
-              dir = dx < 0 ? "ArrowLeft" : "ArrowRight";
-            }
-          } else {
-            // Opp / ned
-            if (Math.abs(dy) > DEADZONE) {
-              dir = dy < 0 ? "ArrowUp" : "ArrowDown";
-            }
-          }
-
-          setDirection(dir);
-          e.preventDefault();
-        });
-
-        const endThumb = (e) => {
-          if (!thumbActive) return;
-          thumbActive = false;
-          setDirection(null);
-          e.preventDefault();
-        };
-
-        thumbZone.addEventListener("touchend", endThumb);
-        thumbZone.addEventListener("touchcancel", endThumb);
-      }
 
       // Skjul intro-overlay etter ~3 sek
       const overlay = document.getElementById("intro-overlay");
