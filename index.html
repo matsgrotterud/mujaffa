@@ -42,7 +42,7 @@
       background: #000;
       max-width: 100%;
       width: 100%;
-      height: calc(100vh - 200px);
+      height: 100vh;
       position: relative;
     }
 
@@ -333,12 +333,12 @@
         if (player.focus) player.focus();
       }
 
-      // ---- PILTAST-SENSITIVITET PÅ TOUCH-KNAPPENE ----
-      const ARROW_HOLD_DELAY_MS = 90; // 60 = mer sensitiv, 140 = tregere
-
       const buttons = document.querySelectorAll("button[data-key]");
-      const arrowTimers = {};
-      const arrowDown = {};
+
+      // PILTAST TAP vs HOLD LOGIKK
+      const HOLD_DELAY_MS = 140;  // hvor lenge du må holde før det blir "hold"
+      const TAP_PULSE_MS  = 55;   // hvor lenge en "tap" skal være nede
+
       const ARROW_CODES = {
         ArrowLeft: true,
         ArrowRight: true,
@@ -346,21 +346,38 @@
         ArrowDown: true
       };
 
+      const arrowState = {}; // per kode: { isDown, holdTimeout, tapTimeout, touchStartTime }
+
       buttons.forEach(btn => {
         const code = btn.dataset.key;
         const isArrow = !!ARROW_CODES[code];
+
+        if (isArrow && !arrowState[code]) {
+          arrowState[code] = {
+            isDown: false,
+            holdTimeout: null,
+            tapTimeout: null,
+            touchStartTime: 0
+          };
+        }
 
         const start = (e) => {
           e.preventDefault();
 
           if (isArrow) {
-            if (arrowTimers[code] || arrowDown[code]) return;
+            const state = arrowState[code];
 
-            arrowTimers[code] = setTimeout(() => {
+            // Hvis allerede aktiv, ikke spam
+            if (state.isDown || state.holdTimeout) return;
+
+            state.touchStartTime = performance.now();
+
+            // Etter HOLD_DELAY_MS blir dette en "hold"
+            state.holdTimeout = setTimeout(() => {
               sendKey("keydown", code);
-              arrowDown[code] = true;
-              arrowTimers[code] = null;
-            }, ARROW_HOLD_DELAY_MS);
+              state.isDown = true;
+              state.holdTimeout = null;
+            }, HOLD_DELAY_MS);
           } else {
             // Z/X/H/B – instant
             sendKey("keydown", code);
@@ -370,18 +387,34 @@
         const end = (e) => {
           e.preventDefault();
 
-          if (isArrow) {
-            if (arrowTimers[code]) {
-              clearTimeout(arrowTimers[code]);
-              arrowTimers[code] = null;
+          if (!isArrow) {
+            // Z/X/H/B – vanlig keyup
+            sendKey("keyup", code);
+            return;
+          }
+
+          const state = arrowState[code];
+
+          // Hvis vi fortsatt er i "pre-hold" fasen → dette er en TAP
+          if (state.holdTimeout) {
+            clearTimeout(state.holdTimeout);
+            state.holdTimeout = null;
+
+            // Send en definert, kort pulse (keydown + keyup med delay)
+            sendKey("keydown", code);
+
+            if (state.tapTimeout) {
+              clearTimeout(state.tapTimeout);
             }
 
-            if (arrowDown[code]) {
+            state.tapTimeout = setTimeout(() => {
               sendKey("keyup", code);
-              arrowDown[code] = false;
-            }
-          } else {
+              state.tapTimeout = null;
+            }, TAP_PULSE_MS);
+          } else if (state.isDown) {
+            // Vi er i HOLD-modus → slipp tasten nå
             sendKey("keyup", code);
+            state.isDown = false;
           }
         };
 
@@ -390,7 +423,7 @@
         btn.addEventListener("touchend", end, { passive: false });
         btn.addEventListener("touchcancel", end, { passive: false });
 
-        // Mus (desktop)
+        // Mus (desktop – for debugging / ev. musebrukere)
         btn.addEventListener("mousedown", start);
         btn.addEventListener("mouseup", end);
         btn.addEventListener("mouseleave", end);
