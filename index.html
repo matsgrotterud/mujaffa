@@ -131,19 +131,7 @@
       opacity: 0.9;
     }
 
-    /* Fullscreen-knapp (diskret) */
-
-    #fullscreen-btn {
-      position: fixed;
-      right: 10px;
-      bottom: 90px;
-      z-index: 45;
-      padding: 6px 10px;
-      font-size: 11px;
-      opacity: 0.8;
-    }
-
-    /* FULLBREDDES KONTROLL-STASJON NEDERST */
+    /* FULLBREDDES KONTROLL-STASJON NEDERST (kun mobil) */
 
     #touch-controls {
       position: fixed;
@@ -202,6 +190,13 @@
       transform: translateY(1px);
     }
 
+    /* Skjul touch-controls på desktop */
+    @media (min-width: 768px) {
+      #touch-controls {
+        display: none;
+      }
+    }
+
     @media (max-width: 900px) {
       #touch-controls-inner {
         max-width: 100%;
@@ -210,10 +205,6 @@
 
       #touch-controls-inner button {
         border-radius: 14px;
-      }
-
-      #fullscreen-btn {
-        bottom: 110px;
       }
     }
   </style>
@@ -236,25 +227,22 @@
     <div id="game"></div>
   </div>
 
-  <!-- Fullscreen-knapp -->
-  <button id="fullscreen-btn">Fullscreen</button>
-
   <!-- Kontrollstasjon nederst:
        Rad 1: [ X (TUT) ] [ ▲ ] [ Z (VINK) ]
        Rad 2: [ ◀      ] [ ▼ ] [ ▶       ] -->
   <div id="touch-controls">
     <div id="touch-controls-inner">
       <!-- Øverste rad -->
-      <!-- VENSTRE: X = TUT (bare emoji) -->
+      <!-- VENSTRE: X = TUT (eggplant) -->
       <button data-key="KeyX" aria-label="Tut (X)">
-        📯
+        🍆
       </button>
 
       <button class="btn-arrow" data-key="ArrowUp" aria-label="Opp">
         ▲
       </button>
 
-      <!-- HØYRE: Z = VINK (bare emoji) -->
+      <!-- HØYRE: Z = VINK (vink-emoji) -->
       <button data-key="KeyZ" aria-label="Vink (Z)">
         👋
       </button>
@@ -288,16 +276,6 @@
 
       // Last inn Mujaffa SWF-en
       player.load("games/mujaffa.swf");
-
-      // Fullscreen-knapp
-      const fullscreenBtn = document.getElementById("fullscreen-btn");
-      fullscreenBtn.addEventListener("click", () => {
-        if (player.requestFullscreen) {
-          player.requestFullscreen();
-        } else if (container.requestFullscreen) {
-          container.requestFullscreen();
-        }
-      });
 
       // Fokus – viktig for keyboard events
       player.tabIndex = 0;
@@ -335,8 +313,9 @@
 
       const buttons = document.querySelectorAll("button[data-key]");
 
-      // PILTAST TAP vs HOLD LOGIKK v4 – enda mindre sensitiv
-      const HOLD_DELAY_MS = 700; // må holde ganske lenge før vi kaller det "hold"
+      // PILTAST TAP vs HOLD LOGIKK v5 – enda mindre sensitivitet
+      const HOLD_DELAY_MS = 700;         // hvor lenge du må holde før det blir "hold"
+      const TAP_PULSE_EVERY = 2;         // kun hvert 2. tap gir faktisk pulse
 
       const ARROW_CODES = {
         ArrowLeft: true,
@@ -345,7 +324,7 @@
         ArrowDown: true
       };
 
-      const arrowState = {}; // per kode: { isDown, holdTimeout }
+      const arrowState = {}; // per kode: { isDown, holdTimeout, tapCount }
 
       buttons.forEach(btn => {
         const code = btn.dataset.key;
@@ -354,7 +333,8 @@
         if (isArrow && !arrowState[code]) {
           arrowState[code] = {
             isDown: false,
-            holdTimeout: null
+            holdTimeout: null,
+            tapCount: 0
           };
         }
 
@@ -395,9 +375,14 @@
             clearTimeout(state.holdTimeout);
             state.holdTimeout = null;
 
-            // TAP: superkort pulse – keydown og keyup umiddelbart
-            sendKey("keydown", code);
-            sendKey("keyup", code);
+            // Øk tap-count og send bare pulse på hvert N-te tap
+            state.tapCount += 1;
+
+            if (state.tapCount % TAP_PULSE_EVERY === 0) {
+              // TAP: superkort pulse – keydown og keyup umiddelbart
+              sendKey("keydown", code);
+              sendKey("keyup", code);
+            }
           } else if (state.isDown) {
             // Var i hold-modus → bare slipp
             sendKey("keyup", code);
