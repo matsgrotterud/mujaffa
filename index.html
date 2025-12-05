@@ -25,7 +25,7 @@
     body {
       margin: 0;
       padding: 0;
-      background: #fff;
+      background: #000;
       color: #f5f5f5;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       display: flex;
@@ -33,41 +33,25 @@
       align-items: center;
       min-height: 100vh;
       position: relative;
-    }
-
-    header {
-      padding: 24px 16px 8px;
-      text-align: center;
-    }
-
-    h1 {
-      margin: 0 0 4px;
-      font-size: 28px;
-      letter-spacing: 0.03em;
-    }
-
-    p {
-      margin: 0;
-      opacity: 0.8;
-      font-size: 14px;
+      overflow: hidden;
     }
 
     #game-wrapper {
       margin: 0;
       padding: 0;
-      background: #fff;
+      background: #000;
       max-width: 100%;
       width: 100%;
+      height: 100vh;
+      position: relative;
     }
 
     #game {
-      width: 800px;   /* juster hvis Mujaffa har annen oppløsning */
-      height: 600px;
-      max-width: 100vw;
-      max-height: 70vh;
-      overflow: hidden;
       width: 100%;
-      height: 100vh;
+      height: 100%;
+      max-width: 100vw;
+      max-height: 100vh;
+      overflow: hidden;
     }
 
     ruffle-player {
@@ -79,110 +63,14 @@
       padding: 6px 12px;
       border-radius: 999px;
       border: 1px solid #666;
-      background: #181818;
+      background: rgba(10,10,10,0.9);
       color: #eee;
-      font-size: 12px;
+      font-size: 14px;
       cursor: pointer;
     }
 
     button:hover {
       border-color: #aaa;
-    }
-
-    footer {
-      padding: 8px 16px 24px;
-      font-size: 11px;
-      opacity: 0.6;
-      text-align: center;
-    }
-
-    a {
-      color: #ddd;
-    }
-
-    /* TOUCH-KONTROLLER (alltid synlig for debugging) */
-
-    #controls {
-      text-align: center;
-      margin-top: 8px;
-      position: absolute;
-      bottom:  0;
-      left: 0;
-      right: 0;
-    }
-
-    #touch-controls {
-      margin-top: 12px;
-      user-select: none;
-      -webkit-user-select: none;
-      touch-action: none;
-      position: absolute;
-      bottom: 0;
-      display: flex;
-      justify-content: center;
-      align-items: flex-end;
-      left: 0;
-      right: 0;
-      position: absolute;
-      bottom: 0;
-    }
-
-    /*
-    @media(min-width:767px){
-      #controls {
-        display: none;
-      }
-      #touch-controls {
-        display: none;
-      }
-    }
-    */
-
-    #touch-label {
-      font-size: 11px;
-      opacity: 0.7;
-      margin-bottom: 4px;
-      text-align: center;
-    }
-
-    /* 3x2 grid: 
-       X    ▲    X
-       ◀    ▼    ▶
-    */
-    #touch-controls-inner {
-      display: grid;
-      grid-template-columns: 60px 60px 60px;
-      grid-template-rows: 60px 60px;
-      gap: 10px;
-      justify-content: center;
-      align-items: center;
-      margin-top: 4px;
-    }
-
-    #touch-controls-inner button {
-      width: calc((100%vw/ 3) - 50px);
-      height: 60px;
-      border-radius: 12px;
-      font-size: 20px;
-      border: 1px solid #555;
-      background: rgba(24,24,24,0.9);
-    }
-
-    #touch-controls-inner button:active {
-      border-color: #fff;
-      background: rgba(40,40,40,0.9);
-    }
-
-    /* Litt mer kompakt på mobil */
-    @media (max-width: 900px) {
-      #game {
-        width: 100vw;
-        height: 60vh;
-      }
-
-      #touch-controls-inner {
-        gap: 8px;
-      }
     }
 
     /* FULLSCREEN INTRO-OVERLAY */
@@ -218,12 +106,117 @@
     #intro-overlay p {
       font-size: 14px;
       opacity: 0.9;
-      margin-bottom: 16px;
+      margin-bottom: 8px;
     }
 
-    #intro-overlay small {
-      opacity: 0.7;
+    /* TOPP-KNAPPER (H og B) */
+
+    #top-buttons {
+      position: fixed;
+      top: 8px;
+      left: 0;
+      right: 0;
+      padding: 0 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 50;
+      pointer-events: none; /* slik at bare knappene tar input */
+    }
+
+    #top-buttons button {
+      pointer-events: auto;
+      padding: 6px 10px;
+      font-size: 12px;
+      opacity: 0.85;
+    }
+
+    /* FULLBREDDES KONTROLL-STASJON NEDERST */
+
+    #touch-controls {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      padding: 8px 10px 14px;
+      z-index: 40;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+      background: linear-gradient(to top, rgba(0,0,0,0.95), rgba(0,0,0,0.3), transparent);
+      display: flex;
+      justify-content: center;
+    }
+
+    #touch-controls-inner {
+      width: 100%;
+      max-width: 480px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(2, 64px);
+      gap: 8px;
+    }
+
+    #touch-controls-inner button {
+      width: 100%;
+      height: 100%;
+      border-radius: 16px;
+      border: 1px solid #444;
+      background: rgba(15,15,15,0.95);
+      font-size: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #touch-controls-inner button span.label {
       font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      opacity: 0.8;
+      margin-top: 3px;
+      display: block;
+    }
+
+    .btn-action {
+      font-size: 22px;
+    }
+
+    .btn-arrow {
+      font-size: 24px;
+    }
+
+    #touch-controls-inner button:active {
+      border-color: #fff;
+      background: rgba(40,40,40,0.95);
+      transform: translateY(1px);
+    }
+
+    /* Fullscreen-knapp (diskret) */
+
+    #fullscreen-btn {
+      position: fixed;
+      right: 10px;
+      bottom: 90px;
+      z-index: 45;
+      padding: 6px 10px;
+      font-size: 11px;
+      opacity: 0.8;
+    }
+
+    @media (max-width: 900px) {
+      #touch-controls-inner {
+        max-width: 100%;
+        gap: 6px;
+      }
+
+      #touch-controls-inner button {
+        border-radius: 14px;
+      }
+
+      #fullscreen-btn {
+        bottom: 110px;
+      }
     }
   </style>
 </head>
@@ -235,37 +228,51 @@
     <p>Du har råd til kamera på runde to veit du</p>
   </div>
 
+  <!-- H og B i hvert sitt hjørne på toppen -->
+  <div id="top-buttons">
+    <button data-key="KeyH" aria-label="Håndbrekk (H)">H</button>
+    <button data-key="KeyB" aria-label="Burning (B)">B</button>
+  </div>
+
   <div id="game-wrapper">
     <div id="game"></div>
+  </div>
 
-    <div id="controls">
-      <button id="fullscreen-btn">Fullscreen</button>
-      <!-- Desktop-knapper for H og B -->
-    </div>
+  <!-- Fullscreen-knapp -->
+  <button id="fullscreen-btn">Fullscreen</button>
 
-    <!-- On-screen piltaster + Z/X -->
-    <div id="touch-controls">
-      <div id="touch-controls-inner">
-        <!-- RAD 0: H / B -->
-        <div class="extraLine">
-          <button data-key="KeyH">H</button>
-          <button data-key="KeyB">B</button>
-        </div>
+  <!-- Kontrollstasjon nederst: 
+       Rad 1:  [ X (VINK) ] [ ▲ ] [ Z (TUT) ]
+       Rad 2:  [ ◀ ]        [ ▼ ] [ ▶ ] -->
+  <div id="touch-controls">
+    <div id="touch-controls-inner">
+      <!-- Øverste rad -->
+      <button class="btn-action" data-key="KeyX" aria-label="Vink">
+        👋
+        <span class="label">VINK</span>
+      </button>
 
-        <!-- RAD 1: Z | ▲ | X -->
-        <div class="topLine">
-          <button data-key="KeyZ">Z</button>
-          <button data-key="ArrowUp">▲</button>
-          <button data-key="KeyX">X</button>
-        </div>
+      <button class="btn-arrow" data-key="ArrowUp" aria-label="Opp">
+        ▲
+      </button>
 
-        <!-- RAD 2: ◀ | ▼ | ▶ -->
-        <div class="bottomLine">
-          <button data-key="ArrowLeft">◀</button>
-          <button data-key="ArrowDown">▼</button>
-          <button data-key="ArrowRight">▶</button>
-        </div>
-      </div>
+      <button class="btn-action" data-key="KeyZ" aria-label="Tut">
+        ✋
+        <span class="label">TUT</span>
+      </button>
+
+      <!-- Nederste rad -->
+      <button class="btn-arrow" data-key="ArrowLeft" aria-label="Venstre">
+        ◀
+      </button>
+
+      <button class="btn-arrow" data-key="ArrowDown" aria-label="Ned">
+        ▼
+      </button>
+
+      <button class="btn-arrow" data-key="ArrowRight" aria-label="Høyre">
+        ▶
+      </button>
     </div>
   </div>
 
@@ -298,7 +305,7 @@
       player.tabIndex = 0;
       if (player.focus) player.focus();
 
-      // Riktig mapping: KEY-CODE + faktisk .key-verdi
+      // Mapping: KEY-CODE + faktisk .key-verdi
       const virtualKeyMap = {
         ArrowLeft:  { key: "ArrowLeft", code: "ArrowLeft", keyCode: 37 },
         ArrowUp:    { key: "ArrowUp",   code: "ArrowUp",   keyCode: 38 },
