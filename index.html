@@ -366,134 +366,122 @@
       });
 
       // ---- JOYSTICK-STYRING → ARROW-KEY EVENTS ----
-      const joystick = document.getElementById("joystick");
-      const joystickInner = document.getElementById("joystick-inner");
+      // ---- FORBEDRET JOYSTICK-STYRING → ARROW-KEY EVENTS ----
 
-      let joyActive = false;
-      let joyCenterX = 0;
-      let joyCenterY = 0;
-      let joyCurrentDir = null;
+const joystick = document.getElementById("joystick");
+const joystickInner = document.getElementById("joystick-inner");
 
-      const JOY_DEADZONE = 18;   // px: hvor mye du må dra før noe skjer
-      const JOY_MAX_DIST = 45;   // px: maks visuell utslag på inner-sirkelen
+let joyActive = false;
+let joyCenterX = 0;
+let joyCenterY = 0;
+let joyCurrentDir = null;
 
-      function setJoyDir(newDir) {
-        if (newDir === joyCurrentDir) return;
+// TUNABLE FEEL
+const JOY_DEADZONE = 10;   // mindre = mer respons
+const JOY_RELEASE_ZONE = 6; // hysterese – slipper ikke før vi er nesten i midten
+const JOY_MAX_DIST = 42;
 
-        if (joyCurrentDir) {
-          sendKey("keyup", joyCurrentDir);
-        }
+function setJoyDir(newDir) {
+  if (newDir === joyCurrentDir) return;
 
-        joyCurrentDir = newDir;
+  if (joyCurrentDir) {
+    sendKey("keyup", joyCurrentDir);
+  }
 
-        if (joyCurrentDir) {
-          sendKey("keydown", joyCurrentDir);
-        }
-      }
+  joyCurrentDir = newDir;
 
-      function updateJoystickVisual(dx, dy) {
-        if (!joystickInner) return;
+  if (joyCurrentDir) {
+    sendKey("keydown", joyCurrentDir);
+  }
+}
 
-        const dist = Math.sqrt(dx*dx + dy*dy);
-        const max = JOY_MAX_DIST;
-        const clampedDist = Math.min(dist, max);
-        const ratio = dist === 0 ? 0 : clampedDist / dist;
+function updateJoystickVisual(dx, dy) {
+  const dist = Math.sqrt(dx*dx + dy*dy);
+  const clamped = Math.min(dist, JOY_MAX_DIST);
+  const ratio = dist === 0 ? 0 : clamped / dist;
 
-        const tx = dx * ratio;
-        const ty = dy * ratio;
+  const tx = dx * ratio;
+  const ty = dy * ratio;
 
-        joystickInner.style.transform = `translate(calc(-50% + ${tx}px), calc(-50% + ${ty}px))`;
-      }
+  joystickInner.style.transform =
+    `translate(calc(-50% + ${tx}px), calc(-50% + ${ty}px))`;
+}
 
-      function resetJoystick() {
-        setJoyDir(null);
-        if (joystickInner) {
-          joystickInner.style.transform = "translate(-50%, -50%)";
-        }
-      }
+function resetJoystick() {
+  setJoyDir(null);
+  joystickInner.style.transform = "translate(-50%, -50%)";
+}
 
-      function handleJoyMove(clientX, clientY) {
-        const dx = clientX - joyCenterX;
-        const dy = clientY - joyCenterY;
-        const dist = Math.sqrt(dx*dx + dy*dy);
+function handleJoyMove(clientX, clientY) {
+  const dx = clientX - joyCenterX;
+  const dy = clientY - joyCenterY;
 
-        let dir = null;
+  const absX = Math.abs(dx);
+  const absY = Math.abs(dy);
+  const dist = Math.sqrt(dx*dx + dy*dy);
 
-        if (dist > JOY_DEADZONE) {
-          if (Math.abs(dx) > Math.abs(dy)) {
-            dir = dx < 0 ? "ArrowLeft" : "ArrowRight";
-          } else {
-            dir = dy < 0 ? "ArrowUp" : "ArrowDown";
-          }
-        }
+  // HYSTERESE: ikke slipp retning før vi er skikkelig nær midten
+  if (dist < JOY_RELEASE_ZONE) {
+    resetJoystick();
+    return;
+  }
 
-        setJoyDir(dir);
-        updateJoystickVisual(dx, dy);
-      }
+  let dir = joyCurrentDir;
 
-      if (joystick) {
-        const startJoy = (clientX, clientY) => {
-          const rect = joystick.getBoundingClientRect();
-          joyCenterX = rect.left + rect.width / 2;
-          joyCenterY = rect.top + rect.height / 2;
-          joyActive = true;
-          handleJoyMove(clientX, clientY);
-        };
+  if (dist > JOY_DEADZONE) {
+    if (absX > absY * 1.2) {
+      dir = dx < 0 ? "ArrowLeft" : "ArrowRight";
+    } else if (absY > absX * 1.2) {
+      dir = dy < 0 ? "ArrowUp" : "ArrowDown";
+    }
+  }
 
-        const moveJoy = (clientX, clientY) => {
-          if (!joyActive) return;
-          handleJoyMove(clientX, clientY);
-        };
+  setJoyDir(dir);
+  updateJoystickVisual(dx, dy);
+}
 
-        const endJoy = () => {
-          if (!joyActive) return;
-          joyActive = false;
-          resetJoystick();
-        };
+if (joystick) {
+  const startJoy = (x, y) => {
+    const rect = joystick.getBoundingClientRect();
+    joyCenterX = rect.left + rect.width / 2;
+    joyCenterY = rect.top + rect.height / 2;
+    joyActive = true;
+    handleJoyMove(x, y);
+  };
 
-        // Touch
-        joystick.addEventListener("touchstart", (e) => {
-          if (!e.touches || e.touches.length === 0) return;
-          const t = e.touches[0];
-          e.preventDefault();
-          startJoy(t.clientX, t.clientY);
-        }, { passive: false });
+  const moveJoy = (x, y) => {
+    if (!joyActive) return;
+    handleJoyMove(x, y);
+  };
 
-        joystick.addEventListener("touchmove", (e) => {
-          if (!e.touches || e.touches.length === 0) return;
-          const t = e.touches[0];
-          e.preventDefault();
-          moveJoy(t.clientX, t.clientY);
-        }, { passive: false });
+  const endJoy = () => {
+    if (!joyActive) return;
+    joyActive = false;
+    resetJoystick();
+  };
 
-        joystick.addEventListener("touchend", (e) => {
-          e.preventDefault();
-          endJoy();
-        }, { passive: false });
+  joystick.addEventListener("touchstart", (e) => {
+    const t = e.touches[0];
+    e.preventDefault();
+    startJoy(t.clientX, t.clientY);
+  }, { passive: false });
 
-        joystick.addEventListener("touchcancel", (e) => {
-          e.preventDefault();
-          endJoy();
-        }, { passive: false });
+  joystick.addEventListener("touchmove", (e) => {
+    const t = e.touches[0];
+    e.preventDefault();
+    moveJoy(t.clientX, t.clientY);
+  }, { passive: false });
 
-        // Mus (for debugging på desktop)
-        joystick.addEventListener("mousedown", (e) => {
-          e.preventDefault();
-          startJoy(e.clientX, e.clientY);
-        });
+  joystick.addEventListener("touchend", (e) => {
+    e.preventDefault();
+    endJoy();
+  });
 
-        window.addEventListener("mousemove", (e) => {
-          if (!joyActive) return;
-          e.preventDefault();
-          moveJoy(e.clientX, e.clientY);
-        });
-
-        window.addEventListener("mouseup", (e) => {
-          if (!joyActive) return;
-          e.preventDefault();
-          endJoy();
-        });
-      }
+  joystick.addEventListener("touchcancel", (e) => {
+    e.preventDefault();
+    endJoy();
+  });
+}
 
       // Skjul intro-overlay etter ~3 sek
       const overlay = document.getElementById("intro-overlay");
