@@ -123,3 +123,389 @@
       z-index: 50;
       pointer-events: none; /* slik at bare knappene tar input */
     }
+
+    #top-buttons button {
+      pointer-events: auto;
+      padding: 6px 10px;
+      font-size: 12px;
+      opacity: 0.9;
+    }
+
+    /* Fullscreen-knapp (diskret) */
+
+    #fullscreen-btn {
+      position: fixed;
+      right: 10px;
+      bottom: 90px;
+      z-index: 45;
+      padding: 6px 10px;
+      font-size: 11px;
+      opacity: 0.8;
+    }
+
+    /* FULLBREDDES KONTROLL-STASJON NEDERST */
+
+    #touch-controls {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      padding: 8px 10px 14px;
+      z-index: 40;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+      background: linear-gradient(to top, rgba(0,0,0,0.95), rgba(0,0,0,0.3), transparent);
+      display: flex;
+      justify-content: center;
+    }
+
+    #touch-controls-inner {
+      width: 100%;
+      max-width: 480px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: 72px;
+      gap: 8px;
+      align-items: center;
+    }
+
+    #touch-controls-inner button {
+      width: 100%;
+      height: 100%;
+      border-radius: 16px;
+      border: 1px solid #444;
+      background: rgba(15,15,15,0.95);
+      font-size: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #touch-controls-inner button span.label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      opacity: 0.8;
+      margin-top: 3px;
+      display: block;
+    }
+
+    .btn-action {
+      font-size: 22px;
+    }
+
+    /* JOYSTICK STYLING */
+
+    #joystick {
+      width: 100%;
+      height: 100%;
+      border-radius: 999px;
+      border: 1px solid #555;
+      background: radial-gradient(circle at 30% 30%, #444 0, #111 55%, #000 100%);
+      position: relative;
+      touch-action: none;
+      overflow: hidden;
+    }
+
+    #joystick-inner {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      border-radius: 999px;
+      background: rgba(240,240,240,0.9);
+      border: 2px solid #000;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      transition: transform 0.06s linear;
+      box-shadow: 0 0 8px rgba(0,0,0,0.8);
+    }
+
+    @media (max-width: 900px) {
+      #touch-controls-inner {
+        max-width: 100%;
+        gap: 6px;
+      }
+
+      #touch-controls-inner button {
+        border-radius: 14px;
+      }
+
+      #fullscreen-btn {
+        bottom: 110px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Intro-overlay -->
+  <div id="intro-overlay">
+    <h2>Frem med pikken</h2>
+    <p>Her har'u Mujaffa</p>
+    <p>Du har råd til kamera på runde to veit du</p>
+  </div>
+
+  <!-- H og B i toppen -->
+  <div id="top-buttons">
+    <button data-key="KeyH" aria-label="Håndbrekk (H)">H</button>
+    <button data-key="KeyB" aria-label="Burning (B)">B</button>
+  </div>
+
+  <div id="game-wrapper">
+    <div id="game"></div>
+  </div>
+
+  <!-- Fullscreen-knapp -->
+  <button id="fullscreen-btn">Fullscreen</button>
+
+  <!-- Kontrollstasjon nederst:
+       [ X (VINK) ] [ JOYSTICK ] [ Z (TUT) ] -->
+  <div id="touch-controls">
+    <div id="touch-controls-inner">
+      <button class="btn-action" data-key="KeyX" aria-label="Vink">
+        👋
+        <span class="label">VINK</span>
+      </button>
+
+      <div id="joystick" aria-label="Styring">
+        <div id="joystick-inner"></div>
+      </div>
+
+      <button class="btn-action" data-key="KeyZ" aria-label="Tut">
+        ✋
+        <span class="label">TUT</span>
+      </button>
+    </div>
+  </div>
+
+  <script>
+    window.addEventListener("load", () => {
+      const ruffle = window.RufflePlayer ? window.RufflePlayer.newest() : null;
+      if (!ruffle) {
+        console.error("Ruffle ble ikke lastet.");
+        return;
+      }
+
+      const player = ruffle.createPlayer();
+      const container = document.getElementById("game");
+      container.appendChild(player);
+
+      // Last inn Mujaffa SWF-en
+      player.load("games/mujaffa.swf");
+
+      // Fullscreen-knapp
+      const fullscreenBtn = document.getElementById("fullscreen-btn");
+      fullscreenBtn.addEventListener("click", () => {
+        if (player.requestFullscreen) {
+          player.requestFullscreen();
+        } else if (container.requestFullscreen) {
+          container.requestFullscreen();
+        }
+      });
+
+      // Fokus – viktig for keyboard events
+      player.tabIndex = 0;
+      if (player.focus) player.focus();
+
+      // Mapping: KEY-CODE + faktisk .key-verdi
+      const virtualKeyMap = {
+        ArrowLeft:  { key: "ArrowLeft", code: "ArrowLeft", keyCode: 37 },
+        ArrowUp:    { key: "ArrowUp",   code: "ArrowUp",   keyCode: 38 },
+        ArrowRight: { key: "ArrowRight",code: "ArrowRight",keyCode: 39 },
+        ArrowDown:  { key: "ArrowDown", code: "ArrowDown", keyCode: 40 },
+        KeyZ:       { key: "z",         code: "KeyZ",      keyCode: 90 },
+        KeyX:       { key: "x",         code: "KeyX",      keyCode: 88 },
+        KeyH:       { key: "h",         code: "KeyH",      keyCode: 72 },
+        KeyB:       { key: "b",         code: "KeyB",      keyCode: 66 }
+      };
+
+      function sendKey(type, code) {
+        const info = virtualKeyMap[code];
+        if (!info) return;
+
+        const event = new KeyboardEvent(type, {
+          key:    info.key,
+          code:   info.code,
+          keyCode: info.keyCode,
+          which:  info.keyCode,
+          bubbles: true
+        });
+
+        window.dispatchEvent(event);
+        container.dispatchEvent(event);
+        player.dispatchEvent(event);
+        if (player.focus) player.focus();
+      }
+
+      // ---- KNAPPER (X, Z, H, B) – instant respons ----
+      const buttons = document.querySelectorAll("button[data-key]");
+      buttons.forEach(btn => {
+        const code = btn.dataset.key;
+
+        const start = (e) => {
+          e.preventDefault();
+          sendKey("keydown", code);
+        };
+
+        const end = (e) => {
+          e.preventDefault();
+          sendKey("keyup", code);
+        };
+
+        // Touch
+        btn.addEventListener("touchstart", start, { passive: false });
+        btn.addEventListener("touchend", end, { passive: false });
+        btn.addEventListener("touchcancel", end, { passive: false });
+
+        // Mus (desktop)
+        btn.addEventListener("mousedown", start);
+        btn.addEventListener("mouseup", end);
+        btn.addEventListener("mouseleave", end);
+      });
+
+      // ---- JOYSTICK-STYRING → ARROW-KEY EVENTS ----
+      const joystick = document.getElementById("joystick");
+      const joystickInner = document.getElementById("joystick-inner");
+
+      let joyActive = false;
+      let joyCenterX = 0;
+      let joyCenterY = 0;
+      let joyCurrentDir = null;
+
+      const JOY_DEADZONE = 18;   // px: hvor mye du må dra før noe skjer
+      const JOY_MAX_DIST = 45;   // px: maks visuell utslag på inner-sirkelen
+
+      function setJoyDir(newDir) {
+        if (newDir === joyCurrentDir) return;
+
+        if (joyCurrentDir) {
+          sendKey("keyup", joyCurrentDir);
+        }
+
+        joyCurrentDir = newDir;
+
+        if (joyCurrentDir) {
+          sendKey("keydown", joyCurrentDir);
+        }
+      }
+
+      function updateJoystickVisual(dx, dy) {
+        if (!joystickInner) return;
+
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        const max = JOY_MAX_DIST;
+        const clampedDist = Math.min(dist, max);
+        const ratio = dist === 0 ? 0 : clampedDist / dist;
+
+        const tx = dx * ratio;
+        const ty = dy * ratio;
+
+        joystickInner.style.transform = `translate(calc(-50% + ${tx}px), calc(-50% + ${ty}px))`;
+      }
+
+      function resetJoystick() {
+        setJoyDir(null);
+        if (joystickInner) {
+          joystickInner.style.transform = "translate(-50%, -50%)";
+        }
+      }
+
+      function handleJoyMove(clientX, clientY) {
+        const dx = clientX - joyCenterX;
+        const dy = clientY - joyCenterY;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+
+        let dir = null;
+
+        if (dist > JOY_DEADZONE) {
+          if (Math.abs(dx) > Math.abs(dy)) {
+            dir = dx < 0 ? "ArrowLeft" : "ArrowRight";
+          } else {
+            dir = dy < 0 ? "ArrowUp" : "ArrowDown";
+          }
+        }
+
+        setJoyDir(dir);
+        updateJoystickVisual(dx, dy);
+      }
+
+      if (joystick) {
+        const startJoy = (clientX, clientY) => {
+          const rect = joystick.getBoundingClientRect();
+          joyCenterX = rect.left + rect.width / 2;
+          joyCenterY = rect.top + rect.height / 2;
+          joyActive = true;
+          handleJoyMove(clientX, clientY);
+        };
+
+        const moveJoy = (clientX, clientY) => {
+          if (!joyActive) return;
+          handleJoyMove(clientX, clientY);
+        };
+
+        const endJoy = () => {
+          if (!joyActive) return;
+          joyActive = false;
+          resetJoystick();
+        };
+
+        // Touch
+        joystick.addEventListener("touchstart", (e) => {
+          if (!e.touches || e.touches.length === 0) return;
+          const t = e.touches[0];
+          e.preventDefault();
+          startJoy(t.clientX, t.clientY);
+        }, { passive: false });
+
+        joystick.addEventListener("touchmove", (e) => {
+          if (!e.touches || e.touches.length === 0) return;
+          const t = e.touches[0];
+          e.preventDefault();
+          moveJoy(t.clientX, t.clientY);
+        }, { passive: false });
+
+        joystick.addEventListener("touchend", (e) => {
+          e.preventDefault();
+          endJoy();
+        }, { passive: false });
+
+        joystick.addEventListener("touchcancel", (e) => {
+          e.preventDefault();
+          endJoy();
+        }, { passive: false });
+
+        // Mus (for debugging på desktop)
+        joystick.addEventListener("mousedown", (e) => {
+          e.preventDefault();
+          startJoy(e.clientX, e.clientY);
+        });
+
+        window.addEventListener("mousemove", (e) => {
+          if (!joyActive) return;
+          e.preventDefault();
+          moveJoy(e.clientX, e.clientY);
+        });
+
+        window.addEventListener("mouseup", (e) => {
+          if (!joyActive) return;
+          e.preventDefault();
+          endJoy();
+        });
+      }
+
+      // Skjul intro-overlay etter ~3 sek
+      const overlay = document.getElementById("intro-overlay");
+      if (overlay) {
+        setTimeout(() => {
+          overlay.classList.add("hidden");
+          setTimeout(() => {
+            overlay.style.display = "none";
+          }, 600);
+        }, 3000);
+      }
+    });
+  </script>
+</body>
+</html>
