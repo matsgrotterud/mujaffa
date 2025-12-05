@@ -121,7 +121,7 @@
       justify-content: space-between;
       align-items: center;
       z-index: 50;
-      pointer-events: none; /* slik at bare knappene tar input */
+      pointer-events: none; /* kun knappene tar input */
     }
 
     #top-buttons button {
@@ -165,7 +165,7 @@
       max-width: 480px;
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      grid-template-rows: 72px;
+      grid-template-rows: repeat(2, 64px);
       gap: 8px;
       align-items: center;
     }
@@ -176,7 +176,7 @@
       border-radius: 16px;
       border: 1px solid #444;
       background: rgba(15,15,15,0.95);
-      font-size: 20px;
+      font-size: 22px;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -188,39 +188,18 @@
       text-transform: uppercase;
       letter-spacing: 0.08em;
       opacity: 0.8;
-      margin-top: 3px;
+      margin-top: 2px;
       display: block;
     }
 
-    .btn-action {
-      font-size: 22px;
+    .btn-arrow {
+      font-size: 24px;
     }
 
-    /* JOYSTICK STYLING */
-
-    #joystick {
-      width: 100%;
-      height: 100%;
-      border-radius: 999px;
-      border: 1px solid #555;
-      background: radial-gradient(circle at 30% 30%, #444 0, #111 55%, #000 100%);
-      position: relative;
-      touch-action: none;
-      overflow: hidden;
-    }
-
-    #joystick-inner {
-      position: absolute;
-      width: 40px;
-      height: 40px;
-      border-radius: 999px;
-      background: rgba(240,240,240,0.9);
-      border: 2px solid #000;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      transition: transform 0.06s linear;
-      box-shadow: 0 0 8px rgba(0,0,0,0.8);
+    #touch-controls-inner button:active {
+      border-color: #fff;
+      background: rgba(40,40,40,0.95);
+      transform: translateY(1px);
     }
 
     @media (max-width: 900px) {
@@ -261,21 +240,36 @@
   <button id="fullscreen-btn">Fullscreen</button>
 
   <!-- Kontrollstasjon nederst:
-       [ X (VINK) ] [ JOYSTICK ] [ Z (TUT) ] -->
+       Rad 1: [ X (VINK) ] [ ▲ ] [ Z (TUT) ]
+       Rad 2: [ ◀       ] [ ▼ ] [ ▶       ] -->
   <div id="touch-controls">
     <div id="touch-controls-inner">
-      <button class="btn-action" data-key="KeyX" aria-label="Vink">
+      <!-- Øverste rad -->
+      <button data-key="KeyX" aria-label="Vink">
         👋
         <span class="label">VINK</span>
       </button>
 
-      <div id="joystick" aria-label="Styring">
-        <div id="joystick-inner"></div>
-      </div>
+      <button class="btn-arrow" data-key="ArrowUp" aria-label="Opp">
+        ▲
+      </button>
 
-      <button class="btn-action" data-key="KeyZ" aria-label="Tut">
+      <button data-key="KeyZ" aria-label="Tut">
         ✋
         <span class="label">TUT</span>
+      </button>
+
+      <!-- Nederste rad -->
+      <button class="btn-arrow" data-key="ArrowLeft" aria-label="Venstre">
+        ◀
+      </button>
+
+      <button class="btn-arrow" data-key="ArrowDown" aria-label="Ned">
+        ▼
+      </button>
+
+      <button class="btn-arrow" data-key="ArrowRight" aria-label="Høyre">
+        ▶
       </button>
     </div>
   </div>
@@ -339,19 +333,56 @@
         if (player.focus) player.focus();
       }
 
-      // ---- KNAPPER (X, Z, H, B) – instant respons ----
+      // ---- PILTAST-SENSITIVITET PÅ TOUCH-KNAPPENE ----
+      const ARROW_HOLD_DELAY_MS = 90; // 60 = mer sensitiv, 140 = tregere
+
       const buttons = document.querySelectorAll("button[data-key]");
+      const arrowTimers = {};
+      const arrowDown = {};
+      const ARROW_CODES = {
+        ArrowLeft: true,
+        ArrowRight: true,
+        ArrowUp: true,
+        ArrowDown: true
+      };
+
       buttons.forEach(btn => {
         const code = btn.dataset.key;
+        const isArrow = !!ARROW_CODES[code];
 
         const start = (e) => {
           e.preventDefault();
-          sendKey("keydown", code);
+
+          if (isArrow) {
+            if (arrowTimers[code] || arrowDown[code]) return;
+
+            arrowTimers[code] = setTimeout(() => {
+              sendKey("keydown", code);
+              arrowDown[code] = true;
+              arrowTimers[code] = null;
+            }, ARROW_HOLD_DELAY_MS);
+          } else {
+            // Z/X/H/B – instant
+            sendKey("keydown", code);
+          }
         };
 
         const end = (e) => {
           e.preventDefault();
-          sendKey("keyup", code);
+
+          if (isArrow) {
+            if (arrowTimers[code]) {
+              clearTimeout(arrowTimers[code]);
+              arrowTimers[code] = null;
+            }
+
+            if (arrowDown[code]) {
+              sendKey("keyup", code);
+              arrowDown[code] = false;
+            }
+          } else {
+            sendKey("keyup", code);
+          }
         };
 
         // Touch
@@ -364,124 +395,6 @@
         btn.addEventListener("mouseup", end);
         btn.addEventListener("mouseleave", end);
       });
-
-      // ---- JOYSTICK-STYRING → ARROW-KEY EVENTS ----
-      // ---- FORBEDRET JOYSTICK-STYRING → ARROW-KEY EVENTS ----
-
-const joystick = document.getElementById("joystick");
-const joystickInner = document.getElementById("joystick-inner");
-
-let joyActive = false;
-let joyCenterX = 0;
-let joyCenterY = 0;
-let joyCurrentDir = null;
-
-// TUNABLE FEEL
-const JOY_DEADZONE = 10;   // mindre = mer respons
-const JOY_RELEASE_ZONE = 6; // hysterese – slipper ikke før vi er nesten i midten
-const JOY_MAX_DIST = 42;
-
-function setJoyDir(newDir) {
-  if (newDir === joyCurrentDir) return;
-
-  if (joyCurrentDir) {
-    sendKey("keyup", joyCurrentDir);
-  }
-
-  joyCurrentDir = newDir;
-
-  if (joyCurrentDir) {
-    sendKey("keydown", joyCurrentDir);
-  }
-}
-
-function updateJoystickVisual(dx, dy) {
-  const dist = Math.sqrt(dx*dx + dy*dy);
-  const clamped = Math.min(dist, JOY_MAX_DIST);
-  const ratio = dist === 0 ? 0 : clamped / dist;
-
-  const tx = dx * ratio;
-  const ty = dy * ratio;
-
-  joystickInner.style.transform =
-    `translate(calc(-50% + ${tx}px), calc(-50% + ${ty}px))`;
-}
-
-function resetJoystick() {
-  setJoyDir(null);
-  joystickInner.style.transform = "translate(-50%, -50%)";
-}
-
-function handleJoyMove(clientX, clientY) {
-  const dx = clientX - joyCenterX;
-  const dy = clientY - joyCenterY;
-
-  const absX = Math.abs(dx);
-  const absY = Math.abs(dy);
-  const dist = Math.sqrt(dx*dx + dy*dy);
-
-  // HYSTERESE: ikke slipp retning før vi er skikkelig nær midten
-  if (dist < JOY_RELEASE_ZONE) {
-    resetJoystick();
-    return;
-  }
-
-  let dir = joyCurrentDir;
-
-  if (dist > JOY_DEADZONE) {
-    if (absX > absY * 1.2) {
-      dir = dx < 0 ? "ArrowLeft" : "ArrowRight";
-    } else if (absY > absX * 1.2) {
-      dir = dy < 0 ? "ArrowUp" : "ArrowDown";
-    }
-  }
-
-  setJoyDir(dir);
-  updateJoystickVisual(dx, dy);
-}
-
-if (joystick) {
-  const startJoy = (x, y) => {
-    const rect = joystick.getBoundingClientRect();
-    joyCenterX = rect.left + rect.width / 2;
-    joyCenterY = rect.top + rect.height / 2;
-    joyActive = true;
-    handleJoyMove(x, y);
-  };
-
-  const moveJoy = (x, y) => {
-    if (!joyActive) return;
-    handleJoyMove(x, y);
-  };
-
-  const endJoy = () => {
-    if (!joyActive) return;
-    joyActive = false;
-    resetJoystick();
-  };
-
-  joystick.addEventListener("touchstart", (e) => {
-    const t = e.touches[0];
-    e.preventDefault();
-    startJoy(t.clientX, t.clientY);
-  }, { passive: false });
-
-  joystick.addEventListener("touchmove", (e) => {
-    const t = e.touches[0];
-    e.preventDefault();
-    moveJoy(t.clientX, t.clientY);
-  }, { passive: false });
-
-  joystick.addEventListener("touchend", (e) => {
-    e.preventDefault();
-    endJoy();
-  });
-
-  joystick.addEventListener("touchcancel", (e) => {
-    e.preventDefault();
-    endJoy();
-  });
-}
 
       // Skjul intro-overlay etter ~3 sek
       const overlay = document.getElementById("intro-overlay");
