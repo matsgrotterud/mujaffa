@@ -211,53 +211,84 @@ window.addEventListener("load", () => {
   function sendKey(type, code) {
     const i = virtualKeyMap[code];
     if (!i) return;
-    const e = new KeyboardEvent(type,{key:i.key,code:i.code,keyCode:i.keyCode,which:i.keyCode,bubbles:true});
+    const e = new KeyboardEvent(type,{
+      key:i.key,
+      code:i.code,
+      keyCode:i.keyCode,
+      which:i.keyCode,
+      bubbles:true
+    });
     window.dispatchEvent(e);
     player.dispatchEvent(e);
     player.focus();
   }
 
-  const HOLD_DELAY_MS = 900;
-  const ARROW_CODES = {ArrowLeft:1,ArrowRight:1,ArrowUp:1,ArrowDown:1};
-  const arrowState = {};
+  // ❗ Kun mobil / små skjermer skal ha touch-sensitivitet
+  const isMobileLike = window.matchMedia("(max-width: 767px)").matches;
 
-  document.querySelectorAll("button[data-key]").forEach(btn => {
-    const code = btn.dataset.key;
-    const isArrow = ARROW_CODES[code];
+  if (isMobileLike) {
+    const HOLD_DELAY_MS = 900;
+    const ARROW_CODES = {ArrowLeft:1,ArrowRight:1,ArrowUp:1,ArrowDown:1};
+    const arrowState = {};
 
-    if (isArrow && !arrowState[code])
-      arrowState[code] = {isDown:false,holdTimeout:null};
+    document.querySelectorAll("button[data-key]").forEach(btn => {
+      const code = btn.dataset.key;
+      const isArrow = ARROW_CODES[code];
 
-    btn.addEventListener("touchstart", e => {
-      e.preventDefault();
-      if (!isArrow) return sendKey("keydown", code);
+      if (isArrow && !arrowState[code])
+        arrowState[code] = {isDown:false,holdTimeout:null};
 
-      const s = arrowState[code];
-      if (s.isDown || s.holdTimeout) return;
+      btn.addEventListener("touchstart", e => {
+        e.preventDefault();
+        if (!isArrow) {
+          // X/Z/H/B på touch
+          return sendKey("keydown", code);
+        }
 
-      s.holdTimeout = setTimeout(() => {
-        sendKey("keydown", code);
-        s.isDown = true;
-        s.holdTimeout = null;
-      }, HOLD_DELAY_MS);
-    }, {passive:false});
+        const s = arrowState[code];
+        if (s.isDown || s.holdTimeout) return;
 
-    btn.addEventListener("touchend", e => {
-      e.preventDefault();
-      if (!isArrow) return sendKey("keyup", code);
+        s.holdTimeout = setTimeout(() => {
+          sendKey("keydown", code);
+          s.isDown = true;
+          s.holdTimeout = null;
+        }, HOLD_DELAY_MS);
+      }, {passive:false});
 
-      const s = arrowState[code];
-      if (s.holdTimeout) {
-        clearTimeout(s.holdTimeout);
-        s.holdTimeout = null;
-        sendKey("keydown", code);
-        sendKey("keyup", code);
-      } else if (s.isDown) {
-        sendKey("keyup", code);
-        s.isDown = false;
-      }
-    }, {passive:false});
-  });
+      btn.addEventListener("touchend", e => {
+        e.preventDefault();
+        if (!isArrow) {
+          return sendKey("keyup", code);
+        }
+
+        const s = arrowState[code];
+        if (s.holdTimeout) {
+          clearTimeout(s.holdTimeout);
+          s.holdTimeout = null;
+          // kort tap → kort pulse
+          sendKey("keydown", code);
+          sendKey("keyup", code);
+        } else if (s.isDown) {
+          sendKey("keyup", code);
+          s.isDown = false;
+        }
+      }, {passive:false});
+
+      btn.addEventListener("touchcancel", e => {
+        e.preventDefault();
+        if (!isArrow) return;
+        const s = arrowState[code];
+        if (s.holdTimeout) {
+          clearTimeout(s.holdTimeout);
+          s.holdTimeout = null;
+        }
+        if (s.isDown) {
+          sendKey("keyup", code);
+          s.isDown = false;
+        }
+      }, {passive:false});
+    });
+  }
 
   setTimeout(() => {
     document.getElementById("intro-overlay").classList.add("hidden");
